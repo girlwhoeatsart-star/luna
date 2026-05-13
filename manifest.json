@@ -2,7 +2,7 @@
   "name": "Luna – Period & PMDD Tracker",
   "short_name": "Luna",
   "description": "Track your period and PMDD symptoms",
-  "start_url": "/",
+  "start_url": "/luna/",
   "display": "standalone",
   "background_color": "#0f0a0f",
   "theme_color": "#0f0a0f",
