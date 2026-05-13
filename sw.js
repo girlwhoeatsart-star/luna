@@ -1,8 +1,9 @@
-const CACHE = 'luna-v1';
+const CACHE = 'luna-v2';
 const ASSETS = [
-  '/',
-  '/index.html',
-  '/manifest.json',
+  '/luna/',
+  '/luna/index.html',
+  '/luna/manifest.json',
+  '/luna/sw.js',
   'https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,600;1,400&family=DM+Sans:wght@300;400;500&display=swap'
 ];
 
@@ -24,6 +25,6 @@ self.addEventListener('activate', e => {
 
 self.addEventListener('fetch', e => {
   e.respondWith(
-    caches.match(e.request).then(cached => cached || fetch(e.request).catch(() => caches.match('/index.html')))
+    caches.match(e.request).then(cached => cached || fetch(e.request).catch(() => caches.match('/luna/index.html')))
   );
 });
