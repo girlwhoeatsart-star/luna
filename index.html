@@ -1,0 +1,695 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <meta name="theme-color" content="#0f0a0f" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="apple-mobile-web-app-title" content="Luna" />
+  <meta name="description" content="Period & PMDD tracker" />
+  <link rel="manifest" href="manifest.json" />
+  <link rel="apple-touch-icon" href="icon-192.svg" />
+  <title>Luna</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400;0,600;1,400&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet" />
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg: #0f0a0f;
+      --bg2: #170f17;
+      --bg3: #0c080c;
+      --border: #2a1a2a;
+      --border2: #2a1a2e;
+      --text: #f0e8f0;
+      --text2: #c8a8c8;
+      --text3: #7a5a7a;
+      --text4: #5a3a5a;
+      --accent: #c44c8a;
+      --accent2: #8b1a5a;
+      --period: #5a0a30;
+      --period-text: #f8c0d8;
+      --luteal: #2a1040;
+      --luteal-text: #c0a0e0;
+      --pred: #2a1528;
+      --pred-text: #c880a8;
+    }
+
+    html, body {
+      height: 100%;
+      background: var(--bg);
+      color: var(--text);
+      font-family: 'DM Sans', sans-serif;
+      overscroll-behavior: none;
+    }
+
+    #app {
+      max-width: 480px;
+      margin: 0 auto;
+      min-height: 100vh;
+      min-height: 100dvh;
+      display: flex;
+      flex-direction: column;
+      background: var(--bg);
+    }
+
+    .header {
+      padding: calc(env(safe-area-inset-top) + 20px) 24px 16px;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .app-title {
+      font-family: 'Playfair Display', serif;
+      font-size: 22px;
+      font-weight: 400;
+      color: #e8c8e8;
+      letter-spacing: 0.02em;
+    }
+
+    .app-subtitle {
+      font-size: 11px;
+      color: var(--text3);
+      margin-top: 2px;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+    }
+
+    .status-bar {
+      padding: 14px 24px;
+      background: var(--bg2);
+      border-bottom: 1px solid var(--border);
+    }
+
+    .status-row { display: flex; align-items: center; gap: 10px; }
+
+    .status-dot {
+      width: 10px; height: 10px; border-radius: 50%;
+      background: #3a1a3a; flex-shrink: 0;
+    }
+    .status-dot.on { background: var(--accent); animation: pulse 2s infinite; }
+
+    @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.45} }
+
+    .status-text { font-size: 13px; color: var(--text2); font-weight: 300; }
+    .status-text strong { color: var(--text); font-weight: 500; }
+
+    .action-row {
+      display: flex; gap: 10px;
+      padding: 14px 24px;
+      background: var(--bg2);
+      border-bottom: 1px solid var(--border);
+    }
+
+    .btn {
+      flex: 1; padding: 12px;
+      border: none; border-radius: 12px;
+      font-family: 'DM Sans', sans-serif;
+      font-size: 14px; font-weight: 500;
+      cursor: pointer; transition: all .2s;
+      letter-spacing: .02em;
+    }
+
+    .btn-start { background: var(--accent2); color: #fce8f4; }
+    .btn-start:active { background: #a02068; }
+    .btn-end { background: #1f2a1f; color: #a0c8a0; border: 1px solid #2a3a2a; }
+    .btn-end:active { background: #2a382a; }
+    .btn:disabled { opacity: .35; pointer-events: none; }
+
+    .content { flex: 1; padding: 20px 24px; overflow-y: auto; -webkit-overflow-scrolling: touch; }
+
+    .section-title {
+      font-family: 'Playfair Display', serif;
+      font-size: 18px; font-weight: 400;
+      color: #e0c0e0; margin-bottom: 16px;
+    }
+
+    /* Calendar */
+    .cal-nav { display: flex; align-items: center; justify-content: space-between; margin-bottom: 14px; }
+    .cal-title { font-family: 'Playfair Display', serif; font-size: 16px; color: #d8b8d8; }
+    .cal-btn {
+      background: none; border: none; color: #9a6a9a;
+      font-size: 22px; cursor: pointer; padding: 4px 10px;
+      border-radius: 8px; transition: background .15s; line-height: 1;
+    }
+    .cal-btn:active { background: #1f0f1f; }
+
+    .cal-grid { display: grid; grid-template-columns: repeat(7,1fr); gap: 3px; }
+
+    .cal-day-label {
+      text-align: center; font-size: 11px; color: #5a3a5a;
+      padding: 4px 0; font-weight: 500; letter-spacing: .05em;
+    }
+
+    .cal-cell {
+      aspect-ratio: 1; display: flex; align-items: center; justify-content: center;
+      font-size: 12px; border-radius: 8px; color: var(--text3); position: relative;
+    }
+
+    .cal-cell.today { color: var(--text); font-weight: 600; outline: 1px solid #8b4a8b; }
+    .cal-cell.period { background: var(--period); color: var(--period-text); }
+    .cal-cell.luteal, .cal-cell.luteal-pred { background: var(--luteal); color: var(--luteal-text); }
+    .cal-cell.predicted { background: var(--pred); color: var(--pred-text); border: 1px dashed #5a2050; }
+
+    .sym-dot {
+      position: absolute; bottom: 3px; right: 3px;
+      width: 4px; height: 4px; background: #c8a000; border-radius: 50%;
+    }
+
+    .cal-legend { display: flex; gap: 14px; margin-top: 14px; flex-wrap: wrap; }
+    .cal-legend span { display: flex; align-items: center; gap: 5px; font-size: 11px; color: var(--text3); }
+    .dot { width: 8px; height: 8px; border-radius: 50%; display: inline-block; }
+    .period-dot { background: #8b1a4a; }
+    .luteal-dot { background: #4a2080; }
+    .pred-dot { background: #5a2050; border: 1px dashed #8b3070; }
+
+    /* Today */
+    .date-label { font-size: 13px; color: var(--text3); margin-bottom: 18px; font-style: italic; }
+
+    .symptom-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+
+    .symptom-card {
+      background: #170f1a; border: 1px solid var(--border2);
+      border-radius: 14px; padding: 14px 12px;
+    }
+
+    .sym-icon { font-size: 18px; margin-bottom: 4px; color: #a080b0; }
+    .sym-name { font-size: 12px; color: #9a7a9a; margin-bottom: 10px; }
+
+    .severity-row { display: flex; gap: 3px; }
+
+    .sev-btn {
+      flex: 1; aspect-ratio: 1;
+      border: 1px solid var(--border2); background: #0f0a12;
+      color: var(--text4); border-radius: 6px; font-size: 11px;
+      cursor: pointer; transition: all .15s;
+      font-family: 'DM Sans', sans-serif;
+    }
+    .sev-btn:active { border-color: #6a2a6a; color: #c080c0; }
+    .sev-btn.active { background: #5a0a3a; border-color: #9a2a6a; color: #f0b0d0; }
+
+    .hint { font-size: 11px; color: #4a2a4a; margin-top: 14px; text-align: center; }
+
+    /* History */
+    .empty { color: var(--text4); font-size: 14px; text-align: center; padding: 40px 0; font-style: italic; }
+
+    .cycle-card {
+      background: #170f1a; border: 1px solid var(--border2);
+      border-radius: 12px; padding: 14px 16px; margin-bottom: 8px;
+      display: flex; align-items: center; justify-content: space-between;
+    }
+
+    .cycle-dates { font-size: 14px; color: #d0a8d0; }
+    .cycle-meta { font-size: 12px; color: #6a4a6a; margin-top: 3px; }
+    .active-badge { color: var(--accent) !important; font-weight: 500; }
+
+    .del-btn {
+      background: none; border: none; color: var(--text4);
+      font-size: 22px; cursor: pointer; padding: 4px 8px;
+      border-radius: 6px; line-height: 1; transition: color .15s;
+    }
+    .del-btn:active { color: var(--accent); }
+
+    .prediction-card {
+      background: #1a0f22; border: 1px dashed #4a1a4a;
+      border-radius: 14px; padding: 16px; margin-top: 16px;
+    }
+
+    .pred-label { font-size: 11px; color: #7a4a7a; text-transform: uppercase; letter-spacing: .1em; margin-bottom: 6px; }
+    .pred-date { font-family: 'Playfair Display', serif; font-size: 18px; color: #d880b8; margin-bottom: 6px; }
+    .pred-meta { font-size: 12px; color: #6a3a6a; line-height: 1.5; }
+
+    /* Nav */
+    .nav {
+      display: flex; border-top: 1px solid var(--border);
+      background: var(--bg3);
+      padding-bottom: env(safe-area-inset-bottom);
+    }
+
+    .nav-btn {
+      flex: 1; padding: 12px 8px 8px;
+      background: none; border: none; color: #4a2a4a;
+      cursor: pointer; display: flex; flex-direction: column;
+      align-items: center; gap: 3px;
+      font-family: 'DM Sans', sans-serif; transition: color .15s;
+      -webkit-tap-highlight-color: transparent;
+    }
+    .nav-btn.active { color: var(--accent); }
+    .nav-btn:active { color: #9a3a7a; }
+    .nav-icon { font-size: 18px; }
+    .nav-label { font-size: 10px; letter-spacing: .05em; }
+
+    /* Toast */
+    .toast {
+      position: fixed; top: calc(env(safe-area-inset-top) + 16px);
+      left: 50%; transform: translateX(-50%);
+      background: #2a0f2a; border: 1px solid #5a2a5a;
+      color: #e8c0e8; padding: 10px 20px; border-radius: 20px;
+      font-size: 13px; z-index: 999; white-space: nowrap;
+      animation: fadeIn .2s ease;
+    }
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateX(-50%) translateY(-8px); }
+      to   { opacity: 1; transform: translateX(-50%) translateY(0); }
+    }
+
+    /* Modal */
+    .modal-overlay {
+      position: fixed; inset: 0; background: rgba(0,0,0,.75);
+      display: flex; align-items: center; justify-content: center;
+      z-index: 100; backdrop-filter: blur(4px);
+    }
+    .modal {
+      background: #1a0f1e; border: 1px solid #3a1a3e;
+      border-radius: 20px; padding: 28px 24px;
+      width: 320px; max-width: 90vw;
+      animation: modalIn .2s ease;
+    }
+    @keyframes modalIn {
+      from { opacity: 0; transform: scale(.95) translateY(8px); }
+      to   { opacity: 1; transform: scale(1) translateY(0); }
+    }
+    .modal-title { font-family: 'Playfair Display', serif; font-size: 17px; color: #e0c0e0; margin-bottom: 20px; line-height: 1.3; }
+    .date-input {
+      width: 100%; background: #0f0a12; border: 1px solid #3a1a3e;
+      border-radius: 12px; color: #e0c0e0;
+      font-family: 'DM Sans', sans-serif; font-size: 16px;
+      padding: 12px 14px; margin-bottom: 20px; outline: none;
+      color-scheme: dark;
+    }
+    .date-input:focus { border-color: #8b2a6a; }
+
+    .modal-actions { display: flex; gap: 10px; }
+    .modal-cancel {
+      flex: 1; padding: 11px; background: none;
+      border: 1px solid var(--border2); border-radius: 12px;
+      color: var(--text3); font-family: 'DM Sans', sans-serif;
+      font-size: 14px; cursor: pointer; transition: all .15s;
+    }
+    .modal-cancel:active { border-color: #4a2a4e; color: #a08aa0; }
+    .modal-confirm {
+      flex: 1; padding: 11px; background: #7a1a4a;
+      border: none; border-radius: 12px; color: #fce8f4;
+      font-family: 'DM Sans', sans-serif; font-size: 14px;
+      font-weight: 500; cursor: pointer; transition: all .15s;
+    }
+    .modal-confirm:active { background: #9a2060; }
+
+    /* Install banner */
+    .install-banner {
+      display: none; align-items: center; justify-content: space-between;
+      padding: 10px 16px; background: #1a0a1a; border-bottom: 1px solid #3a1a3a;
+      font-size: 12px; color: #c8a0c8; gap: 10px;
+    }
+    .install-banner.show { display: flex; }
+    .install-btn {
+      background: #7a1a4a; color: #fce8f4; border: none;
+      border-radius: 8px; padding: 6px 12px; font-size: 12px;
+      font-family: 'DM Sans', sans-serif; cursor: pointer; white-space: nowrap;
+    }
+    .install-dismiss { background: none; border: none; color: #5a3a5a; font-size: 18px; cursor: pointer; }
+  </style>
+</head>
+<body>
+<div id="app">
+  <div class="header">
+    <div class="app-title">Luna</div>
+    <div class="app-subtitle">Period &amp; PMDD tracker</div>
+  </div>
+
+  <div class="install-banner" id="installBanner">
+    <span>Add Luna to your home screen for offline use</span>
+    <button class="install-btn" id="installBtn">Install</button>
+    <button class="install-dismiss" id="installDismiss">×</button>
+  </div>
+
+  <div class="status-bar">
+    <div class="status-row">
+      <div class="status-dot" id="statusDot"></div>
+      <div class="status-text" id="statusText">Loading…</div>
+    </div>
+  </div>
+
+  <div class="action-row">
+    <button class="btn btn-start" id="btnStart">Start period</button>
+    <button class="btn btn-end" id="btnEnd">End period</button>
+  </div>
+
+  <div class="content" id="content"></div>
+
+  <nav class="nav">
+    <button class="nav-btn active" data-view="home">
+      <span class="nav-icon">◫</span>
+      <span class="nav-label">Calendar</span>
+    </button>
+    <button class="nav-btn" data-view="today">
+      <span class="nav-icon">✦</span>
+      <span class="nav-label">Today</span>
+    </button>
+    <button class="nav-btn" data-view="history">
+      <span class="nav-icon">◈</span>
+      <span class="nav-label">History</span>
+    </button>
+  </nav>
+
+  <!-- Modal -->
+  <div class="modal-overlay" id="modal" style="display:none">
+    <div class="modal">
+      <div class="modal-title" id="modalTitle"></div>
+      <input type="date" class="date-input" id="dateInput" />
+      <div class="modal-actions">
+        <button class="modal-cancel" id="modalCancel">Cancel</button>
+        <button class="modal-confirm" id="modalConfirm">Confirm</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="toast" id="toast" style="display:none"></div>
+</div>
+
+<script>
+// ── Data helpers ──────────────────────────────────────────────────────────────
+const MONTHS = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+const DAYS   = ["Su","Mo","Tu","We","Th","Fr","Sa"];
+const SYMPTOMS = [
+  { key:"mood",     label:"Mood swings", icon:"◑" },
+  { key:"anxiety",  label:"Anxiety",     icon:"⟳" },
+  { key:"cramps",   label:"Cramps",      icon:"⚡" },
+  { key:"fatigue",  label:"Fatigue",     icon:"◎" },
+  { key:"bloating", label:"Bloating",    icon:"○" },
+  { key:"headache", label:"Headache",    icon:"↯" },
+];
+
+function toDateStr(d) {
+  return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+}
+function parseDate(s) {
+  const [y,m,d] = s.split('-').map(Number);
+  return new Date(y, m-1, d);
+}
+function addDays(d, n) {
+  const r = new Date(d); r.setDate(r.getDate()+n); return r;
+}
+function diffDays(a, b) {
+  return Math.round((b-a)/86400000);
+}
+
+// ── State ─────────────────────────────────────────────────────────────────────
+let cycles   = JSON.parse(localStorage.getItem('pmdd_cycles')   || '[]');
+let symptoms = JSON.parse(localStorage.getItem('pmdd_symptoms') || '{}');
+let view     = 'home';
+let calMonth = { y: new Date().getFullYear(), m: new Date().getMonth() };
+let logMode  = null; // 'start' | 'end'
+const today  = toDateStr(new Date());
+
+function save() {
+  localStorage.setItem('pmdd_cycles',   JSON.stringify(cycles));
+  localStorage.setItem('pmdd_symptoms', JSON.stringify(symptoms));
+}
+
+function activeCycle() {
+  const last = cycles[cycles.length-1];
+  return last && !last.end ? last : null;
+}
+
+function predictNext() {
+  if (cycles.length < 2) return null;
+  const lengths = [];
+  for (let i=1; i<cycles.length; i++) {
+    lengths.push(diffDays(parseDate(cycles[i-1].start), parseDate(cycles[i].start)));
+  }
+  const avg = Math.round(lengths.reduce((a,b)=>a+b,0)/lengths.length);
+  return { date: addDays(parseDate(cycles[cycles.length-1].start), avg), avgCycleLength: avg };
+}
+
+// ── Toast ─────────────────────────────────────────────────────────────────────
+let toastTimer;
+function showToast(msg) {
+  const el = document.getElementById('toast');
+  el.textContent = msg;
+  el.style.display = 'block';
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => el.style.display='none', 2500);
+}
+
+// ── Status bar ────────────────────────────────────────────────────────────────
+function updateStatus() {
+  const dot  = document.getElementById('statusDot');
+  const text = document.getElementById('statusText');
+  const ac   = activeCycle();
+  const pred = predictNext();
+  if (ac) {
+    dot.classList.add('on');
+    const startD = parseDate(ac.start);
+    const day = diffDays(startD, new Date()) + 1;
+    text.innerHTML = `Period active · started <strong>${startD.toLocaleDateString('en-US',{month:'short',day:'numeric'})}</strong> · day <strong>${day}</strong>`;
+  } else if (pred) {
+    dot.classList.remove('on');
+    const pmdd = addDays(pred.date,-14);
+    text.innerHTML = `Next period: <strong>${pred.date.toLocaleDateString('en-US',{month:'short',day:'numeric'})}</strong> · PMDD window ~<strong>${pmdd.toLocaleDateString('en-US',{month:'short',day:'numeric'})}</strong>`;
+  } else {
+    dot.classList.remove('on');
+    text.textContent = 'No active period';
+  }
+  document.getElementById('btnStart').disabled = !!ac;
+  document.getElementById('btnEnd').disabled   = !ac;
+}
+
+// ── Calendar ──────────────────────────────────────────────────────────────────
+function getDayType(dateStr) {
+  const d    = parseDate(dateStr);
+  const ac   = activeCycle();
+  const pred = predictNext();
+  for (const c of cycles) {
+    const s = parseDate(c.start);
+    const e = c.end ? parseDate(c.end) : (ac ? new Date() : null);
+    if (e && d >= s && d <= e) return 'period';
+    const lutealStart = addDays(s,-14);
+    if (!c.end && d >= lutealStart && d < s) return 'luteal';
+    if (c.end && pred && d >= addDays(pred.date,-14) && d < pred.date) return 'luteal-pred';
+  }
+  if (pred) {
+    if (d >= pred.date && d <= addDays(pred.date,5)) return 'predicted';
+  }
+  return null;
+}
+
+function renderCalendar() {
+  const { y, m } = calMonth;
+  const firstDay    = new Date(y,m,1).getDay();
+  const daysInMonth = new Date(y,m+1,0).getDate();
+
+  let html = `
+    <div class="cal-nav">
+      <button class="cal-btn" id="calPrev">‹</button>
+      <span class="cal-title">${MONTHS[m]} ${y}</span>
+      <button class="cal-btn" id="calNext">›</button>
+    </div>
+    <div class="cal-grid">
+      ${DAYS.map(d=>`<div class="cal-day-label">${d}</div>`).join('')}
+      ${Array(firstDay).fill('<div></div>').join('')}
+  `;
+
+  for (let d=1; d<=daysInMonth; d++) {
+    const date = new Date(y,m,d);
+    const ds   = toDateStr(date);
+    const type = getDayType(ds);
+    const isToday = ds === today;
+    const hasSym  = !!symptoms[ds];
+    html += `<div class="cal-cell ${type||''} ${isToday?'today':''}" title="${type||''}">${d}${hasSym?'<span class="sym-dot"></span>':''}</div>`;
+  }
+
+  html += `</div>
+    <div class="cal-legend">
+      <span><span class="dot period-dot"></span>Period</span>
+      <span><span class="dot luteal-dot"></span>Luteal/PMDD</span>
+      <span><span class="dot pred-dot"></span>Predicted</span>
+    </div>`;
+
+  document.getElementById('content').innerHTML = html;
+  document.getElementById('calPrev').onclick = () => {
+    calMonth = calMonth.m===0 ? {y:calMonth.y-1,m:11} : {y:calMonth.y,m:calMonth.m-1};
+    renderCalendar();
+  };
+  document.getElementById('calNext').onclick = () => {
+    calMonth = calMonth.m===11 ? {y:calMonth.y+1,m:0} : {y:calMonth.y,m:calMonth.m+1};
+    renderCalendar();
+  };
+}
+
+// ── Today ─────────────────────────────────────────────────────────────────────
+function renderToday() {
+  const daySymptoms = symptoms[today] || {};
+  const dateLabel = new Date().toLocaleDateString('en-US',{weekday:'long',month:'long',day:'numeric'});
+
+  let html = `
+    <h2 class="section-title">How are you today?</h2>
+    <p class="date-label">${dateLabel}</p>
+    <div class="symptom-grid">
+  `;
+
+  for (const s of SYMPTOMS) {
+    html += `<div class="symptom-card">
+      <div class="sym-icon">${s.icon}</div>
+      <div class="sym-name">${s.label}</div>
+      <div class="severity-row">
+        ${[1,2,3,4,5].map(n=>`<button class="sev-btn ${daySymptoms[s.key]===n?'active':''}" data-key="${s.key}" data-val="${n}">${n}</button>`).join('')}
+      </div>
+    </div>`;
+  }
+
+  html += `</div><p class="hint">1 = mild &nbsp;·&nbsp; 5 = severe</p>`;
+  document.getElementById('content').innerHTML = html;
+
+  document.getElementById('content').querySelectorAll('.sev-btn').forEach(btn => {
+    btn.onclick = () => {
+      const key = btn.dataset.key;
+      const val = parseInt(btn.dataset.val);
+      if (!symptoms[today]) symptoms[today] = {};
+      if (symptoms[today][key] === val) delete symptoms[today][key];
+      else symptoms[today][key] = val;
+      save();
+      renderToday();
+    };
+  });
+}
+
+// ── History ───────────────────────────────────────────────────────────────────
+function renderHistory() {
+  if (!cycles.length) {
+    document.getElementById('content').innerHTML = '<p class="empty">No cycles logged yet.</p>';
+    return;
+  }
+
+  const pred = predictNext();
+  let html = `<h2 class="section-title">Cycle History</h2>`;
+
+  [...cycles].reverse().forEach((c, i) => {
+    const idx   = cycles.length-1-i;
+    const start = parseDate(c.start);
+    const end   = c.end ? parseDate(c.end) : null;
+    const len   = end ? diffDays(start,end)+1 : null;
+    html += `<div class="cycle-card">
+      <div class="cycle-info">
+        <div class="cycle-dates">${start.toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'})}${end?' → '+end.toLocaleDateString('en-US',{month:'short',day:'numeric'}):'  → ongoing'}</div>
+        ${len ? `<div class="cycle-meta">${len} day${len!==1?'s':''}</div>` : ''}
+        ${!c.end ? '<div class="cycle-meta active-badge">Active</div>' : ''}
+      </div>
+      <button class="del-btn" data-idx="${idx}">×</button>
+    </div>`;
+  });
+
+  if (pred) {
+    const pmdd = addDays(pred.date,-14);
+    html += `<div class="prediction-card">
+      <div class="pred-label">Next predicted period</div>
+      <div class="pred-date">${pred.date.toLocaleDateString('en-US',{weekday:'short',month:'long',day:'numeric'})}</div>
+      <div class="pred-meta">Based on avg ${pred.avgCycleLength}-day cycle · PMDD window starts ~${pmdd.toLocaleDateString('en-US',{month:'short',day:'numeric'})}</div>
+    </div>`;
+  }
+
+  document.getElementById('content').innerHTML = html;
+  document.getElementById('content').querySelectorAll('.del-btn').forEach(btn => {
+    btn.onclick = () => {
+      cycles.splice(parseInt(btn.dataset.idx),1);
+      save(); updateStatus(); renderHistory();
+    };
+  });
+}
+
+// ── Render ────────────────────────────────────────────────────────────────────
+function render() {
+  updateStatus();
+  if (view==='home')    renderCalendar();
+  if (view==='today')   renderToday();
+  if (view==='history') renderHistory();
+}
+
+// ── Nav ───────────────────────────────────────────────────────────────────────
+document.querySelectorAll('.nav-btn').forEach(btn => {
+  btn.onclick = () => {
+    view = btn.dataset.view;
+    document.querySelectorAll('.nav-btn').forEach(b=>b.classList.remove('active'));
+    btn.classList.add('active');
+    render();
+  };
+});
+
+// ── Modal ─────────────────────────────────────────────────────────────────────
+function openModal(mode) {
+  logMode = mode;
+  document.getElementById('modalTitle').textContent =
+    mode==='start' ? 'When did your period start?' : 'When did your period end?';
+  document.getElementById('dateInput').value = today;
+  document.getElementById('dateInput').max   = today;
+  document.getElementById('modal').style.display = 'flex';
+}
+function closeModal() {
+  document.getElementById('modal').style.display = 'none';
+  logMode = null;
+}
+
+document.getElementById('btnStart').onclick = () => {
+  const ac = activeCycle();
+  if (ac) { showToast('Period already active — end it first'); return; }
+  openModal('start');
+};
+document.getElementById('btnEnd').onclick = () => {
+  if (!activeCycle()) { showToast('No active period to end'); return; }
+  openModal('end');
+};
+document.getElementById('modalCancel').onclick = closeModal;
+document.getElementById('modal').onclick = e => { if (e.target===document.getElementById('modal')) closeModal(); };
+
+document.getElementById('modalConfirm').onclick = () => {
+  const date = document.getElementById('dateInput').value;
+  if (!date) return;
+  const ac = activeCycle();
+  if (logMode==='start') {
+    if (ac) { showToast('Period already active'); closeModal(); return; }
+    cycles.push({ start: date, end: null });
+    showToast('Period started ✓');
+  } else {
+    if (!ac) { showToast('No active period'); closeModal(); return; }
+    if (date <= ac.start) { showToast('End date must be after start date'); return; }
+    cycles[cycles.length-1].end = date;
+    showToast('Period ended ✓');
+  }
+  save();
+  closeModal();
+  render();
+};
+
+// ── PWA Install ───────────────────────────────────────────────────────────────
+let deferredPrompt;
+const banner = document.getElementById('installBanner');
+
+window.addEventListener('beforeinstallprompt', e => {
+  e.preventDefault();
+  deferredPrompt = e;
+  if (!localStorage.getItem('installDismissed')) banner.classList.add('show');
+});
+
+document.getElementById('installBtn').onclick = async () => {
+  if (!deferredPrompt) return;
+  deferredPrompt.prompt();
+  const { outcome } = await deferredPrompt.userChoice;
+  if (outcome==='accepted') banner.classList.remove('show');
+  deferredPrompt = null;
+};
+
+document.getElementById('installDismiss').onclick = () => {
+  banner.classList.remove('show');
+  localStorage.setItem('installDismissed','1');
+};
+
+// ── Service Worker ────────────────────────────────────────────────────────────
+if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.register('sw.js').catch(()=>{});
+}
+
+// ── Init ──────────────────────────────────────────────────────────────────────
+render();
+</script>
+</body>
+</html>
