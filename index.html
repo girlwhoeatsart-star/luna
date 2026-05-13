@@ -685,7 +685,7 @@ document.getElementById('installDismiss').onclick = () => {
 
 // ── Service Worker ────────────────────────────────────────────────────────────
 if ('serviceWorker' in navigator) {
-  navigator.serviceWorker.register('sw.js').catch(()=>{});
+  navigator.serviceWorker.register('/luna/sw.js', { scope: '/luna/' }).catch(()=>{});
 }
 
 // ── Init ──────────────────────────────────────────────────────────────────────
